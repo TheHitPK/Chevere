@@ -1,0 +1,53 @@
+{
+  "name": "chevere",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
+    "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=8000\" next build",
+    "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
+    "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
+    "migrate": "cross-env MIGRATE=1 NODE_OPTIONS=--no-deprecation payload migrate",
+    "migrate:create": "cross-env MIGRATE=1 NODE_OPTIONS=--no-deprecation payload migrate:create",
+    "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
+    "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
+    "seed": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed.ts",
+    "test:access": "cross-env NODE_OPTIONS=--no-deprecation payload run src/tests/access.test.ts",
+    "seed:categorias": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed-categorias.ts",
+    "vercel-build": "npm run migrate && npm run seed:categorias && npm run build",
+    "start:railway": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=384\" next start",
+    "railway:predeploy": "npm run migrate && npm run seed:categorias"
+  },
+  "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/manrope": "^5.3.0",
+    "@payloadcms/db-postgres": "3.93.0",
+    "@payloadcms/db-sqlite": "3.93.0",
+    "@payloadcms/next": "3.93.0",
+    "@payloadcms/richtext-lexical": "3.93.0",
+    "@payloadcms/storage-s3": "3.93.0",
+    "@payloadcms/translations": "^3.93.0",
+    "@payloadcms/ui": "3.93.0",
+    "cross-env": "^10.1.0",
+    "graphql": "^16.8.1",
+    "next": "16.4.6",
+    "payload": "3.93.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "^0.0.1",
+    "sharp": "^0.34.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "postcss": "^8.5.32",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^5.8"
+  },
+  "engines": {
+    "node": ">=20.9"
+  }
+}

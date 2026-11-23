@@ -1,0 +1,28 @@
+/* Colores de Chévere en el panel de gestión */
+:root {
+  --theme-success-500: #c2007a;
+  --theme-success-600: #a8006a;
+  --theme-success-400: #d61a8f;
+  --theme-success-100: #ffe3f2;
+  --theme-success-50: #fff1f8;
+}
+
+/* Botón primario (Guardar / Publicar) en magenta de marca */
+.btn--style-primary {
+  background-color: #c2007a;
+  color: #fff;
+}
+.btn--style-primary:hover:not(:disabled) {
+  background-color: #a8006a;
+}
+
+/* Foco visible en amarillo sol (accesibilidad) */
+*:focus-visible {
+  outline: 3px solid #ffd21f !important;
+  outline-offset: 2px;
+}
+
+.nav__link.active,
+.nav__link:hover {
+  color: #c2007a;
+}
