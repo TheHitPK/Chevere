@@ -51,7 +51,10 @@ const r2 = {
 }
 const usaR2 = Object.values(r2).every(Boolean)
 // Vercel Blob: el almacén de archivos de Vercel. Al conectarlo al proyecto, Vercel crea BLOB_READ_WRITE_TOKEN solo.
-const blobToken = process.env.BLOB_READ_WRITE_TOKEN
+// Si al conectarlo se puso un prefijo (p. ej. CHEVERE_FOTOS_READ_WRITE_TOKEN), lo buscamos por su valor: todos empiezan por vercel_blob_rw_.
+const blobToken =
+  process.env.BLOB_READ_WRITE_TOKEN ||
+  Object.entries(process.env).find(([k, v]) => k.endsWith('READ_WRITE_TOKEN') && v?.startsWith('vercel_blob_rw_'))?.[1]
 const usaBlob = !usaR2 && Boolean(blobToken)
 
 // En Vercel no hay disco permanente: sin Postgres ni R2 la tienda "funcionaría" pero perdería los datos.
