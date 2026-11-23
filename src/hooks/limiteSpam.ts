@@ -10,9 +10,17 @@ type Opciones = {
   ventanaMin?: number
 }
 
-/** IP del visitante. En Vercel, `x-forwarded-for` la pone Vercel y no se puede falsificar desde fuera. */
+/**
+ * IP del visitante. Detrás de Cloudflare, `cf-connecting-ip` trae la IP real del cliente.
+ * Sin Cloudflare (Vercel/Railway), se usa la primera de `x-forwarded-for`.
+ */
 const ipDe = (headers: Headers | undefined) =>
-  (headers?.get('x-forwarded-for')?.split(',')[0] ?? headers?.get('x-real-ip') ?? 'desconocida').trim()
+  (
+    headers?.get('cf-connecting-ip') ??
+    headers?.get('x-forwarded-for')?.split(',')[0] ??
+    headers?.get('x-real-ip') ??
+    'desconocida'
+  ).trim()
 
 /** Guardamos solo un código (hash) de la IP, nunca la IP en claro. */
 const hashDe = (ip: string) =>

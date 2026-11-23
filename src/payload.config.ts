@@ -2,6 +2,7 @@ import { postgresAdapter } from '@payloadcms/db-postgres'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { s3Storage } from '@payloadcms/storage-s3'
+import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import { es } from '@payloadcms/translations/languages/es'
 import { en } from '@payloadcms/translations/languages/en'
 import path from 'path'
@@ -49,6 +50,9 @@ const r2 = {
   secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
 }
 const usaR2 = Object.values(r2).every(Boolean)
+// Vercel Blob: el almacén de archivos de Vercel. Al conectarlo al proyecto, Vercel crea BLOB_READ_WRITE_TOKEN solo.
+const blobToken = process.env.BLOB_READ_WRITE_TOKEN
+const usaBlob = !usaR2 && Boolean(blobToken)
 
 // En Vercel no hay disco permanente: sin Postgres ni R2 la tienda "funcionaría" pero perdería los datos.
 // Preferimos frenar con un mensaje claro a que eso pase en silencio.
@@ -56,7 +60,7 @@ if (enVercel) {
   const faltan: string[] = []
   if ((process.env.PAYLOAD_SECRET ?? '').length < 32) faltan.push('PAYLOAD_SECRET (mínimo 32 caracteres)')
   if (!usaPostgres) faltan.push('DATABASE_URL (la dirección de Neon, empieza por postgres://)')
-  if (!usaR2) faltan.push('R2_ACCOUNT_ID, R2_BUCKET, R2_ACCESS_KEY_ID y R2_SECRET_ACCESS_KEY (Cloudflare R2)')
+  if (!usaR2 && !usaBlob) faltan.push('BLOB_READ_WRITE_TOKEN (conecta un almacén Blob en Vercel → Storage) o las variables R2_* de Cloudflare R2')
   if (!process.env.NEXT_PUBLIC_SERVER_URL) faltan.push('NEXT_PUBLIC_SERVER_URL (la dirección pública de tu tienda, con https://)')
   if (faltan.length) {
     throw new Error(`Faltan variables de entorno en Vercel:\n - ${faltan.join('\n - ')}\nAgrégalas en Vercel → Settings → Environment Variables y vuelve a desplegar. Guía: DESPLIEGUE.md`)
@@ -67,7 +71,9 @@ if (enVercel) {
 // guardarían en el disco del contenedor y se borrarían en cada despliegue.
 if (enRailway && !migrando) {
   const faltan: string[] = []
-  if ((process.env.PAYLOAD_SECRET ?? '').length < 32) faltan.push('PAYLOAD_SECRET (mínimo 32 caracteres)')
+  const secreto = process.env.PAYLOAD_SECRET ?? ''
+  if (secreto.length < 32) faltan.push('PAYLOAD_SECRET (mínimo 32 caracteres)')
+  if (secreto.includes('PEGA-AQUI')) faltan.push('PAYLOAD_SECRET (todavía tiene el texto de ejemplo de la guía; genera uno nuevo)')
   if (!usaPostgres) faltan.push('DATABASE_URL (usa ${{Postgres.DATABASE_URL}})')
   if (!usaR2 && !process.env.MEDIA_DIR) faltan.push('MEDIA_DIR (la ruta del volumen, p. ej. /data/media) o las variables R2_*')
   if (!process.env.NEXT_PUBLIC_SERVER_URL) faltan.push('NEXT_PUBLIC_SERVER_URL (la dirección pública de tu tienda, con https://)')
@@ -93,6 +99,12 @@ const plugins: Plugin[] = usaR2 || migrando
       }),
     ]
   : []
+
+// Vercel Blob (plan gratis de Vercel: 1 GB). Añade al esquema las mismas columnas ocultas que R2 (_objectKey),
+// así que las migraciones existentes sirven tal cual. Se usa solo si no hay R2 configurado.
+if (usaBlob) {
+  plugins.splice(0, plugins.length, vercelBlobStorage({ collections: { media: true }, token: blobToken }))
+}
 
 export default buildConfig({
   serverURL: process.env.NEXT_PUBLIC_SERVER_URL || '',

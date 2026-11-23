@@ -1,15 +1,20 @@
-# Cómo publicar Chévere en la nube (Vercel + Neon + Cloudflare R2)
+# Cómo publicar Chévere en la nube (Vercel + Neon + Vercel Blob), plan gratis
 
-Tiempo estimado: 45–60 minutos la primera vez. No necesitas saber programar para seguir estos pasos.
+Tiempo estimado: 30–45 minutos la primera vez. No necesitas saber programar para seguir estos pasos.
+**Ninguno de estos servicios pide tarjeta en su plan gratis.** La base de datos y el almacén de fotos se crean desde el mismo panel de Vercel.
 
 **Qué hace cada servicio**
 
-| Servicio | Para qué sirve | Qué guarda |
-|---|---|---|
-| **GitHub** | Guarda tu código | El código (nunca contraseñas ni fotos) |
-| **Neon** | Base de datos (Postgres) | Productos, pedidos, empleados, reseñas |
-| **Cloudflare R2** | Almacén de archivos | Las fotos y las secuencias 360° |
-| **Vercel** | Ejecuta la tienda en internet | Nada: solo corre el código |
+| Servicio | Para qué sirve | Qué guarda | Límite gratis (aprox.) |
+|---|---|---|---|
+| **GitHub** | Guarda tu código | El código (nunca contraseñas ni fotos) | — |
+| **Neon** (desde Vercel) | Base de datos (Postgres) | Productos, pedidos, empleados, reseñas | 0,5 GB |
+| **Vercel Blob** | Almacén de archivos | Las fotos y las secuencias 360° | 1 GB y 10 GB de descarga al mes |
+| **Vercel** | Ejecuta la tienda en internet | Nada: solo corre el código | 5.000 optimizaciones de imagen al mes |
+
+Si Blob pasa su límite, Vercel **no cobra**: deja de servir las fotos hasta el mes siguiente. Te avisa por correo antes de llegar. Cuando eso pase, es el momento de pasar al plan Pro.
+
+> **Sobre el plan gratis de Vercel (*Hobby*):** según sus términos es para uso personal y no comercial. Sirve para montar y probar la tienda; para vender de verdad lo normal es pasar a *Pro*. Al pasar no hay que cambiar nada del código ni volver a cargar datos.
 
 Tu tienda arranca en **modo catálogo**: se ven productos y precios, y los clientes consultan por WhatsApp. El pago en línea se agrega después.
 
@@ -31,49 +36,51 @@ git push -u origin main
 
 3. **Comprobación importante:** entra al repositorio en GitHub y verifica que **no** aparezcan `.env`, `chevere.db` ni la carpeta `media`. El archivo `.gitignore` ya los excluye, pero confírmalo: ahí vive tu clave secreta.
 
-## Paso 2 · Crear la base de datos en Neon
+## Paso 2 · Importar el proyecto en Vercel (sin desplegar todavía)
 
-1. Crea una cuenta en <https://neon.tech> y un proyecto nuevo (nombre `chevere`). Elige la región más cercana a tus clientes.
-2. Pulsa **Connect** y copia **dos** direcciones (empiezan por `postgres://`):
-   - la **pooled** (activa la opción *Connection pooling*; el host trae `-pooler`) → será `DATABASE_URL`
-   - la **directa** (con *Connection pooling* apagado) → será `DATABASE_URL_UNPOOLED`
-
-Déjalas a mano para el Paso 4. No hay que crear tablas: se crean solas en el primer despliegue.
-
-## Paso 3 · Crear el almacén de fotos en Cloudflare R2
-
-1. Crea una cuenta en <https://dash.cloudflare.com> y entra a **R2 Object Storage**. Puede pedirte un método de pago para activarlo, aunque incluye una capa gratuita; revisa las condiciones vigentes.
-2. **Create bucket** → nombre `chevere-media`. No lo hagas público: la tienda sirve las fotos por su propia dirección.
-3. Copia tu **Account ID** (aparece en la página de R2).
-4. **Manage API Tokens → Create API token**, permiso **Object Read & Write**, limitado al bucket `chevere-media`. Copia el **Access Key ID** y el **Secret Access Key** (el secreto se muestra una sola vez).
-
-## Paso 4 · Publicar en Vercel
-
-1. Crea una cuenta en <https://vercel.com> e inicia sesión con GitHub.
-2. **Add New → Project**, elige el repositorio `chevere` y **antes de pulsar Deploy** abre *Environment Variables* y agrega estas 8:
+1. Crea una cuenta en <https://vercel.com> con **Continue with GitHub** y elige el plan **Hobby**.
+2. **Add New → Project** → elige el repositorio `chevere` → **Import**.
+3. Abre **Environment Variables** y agrega estas 2:
 
 | Nombre | Valor |
 |---|---|
-| `PAYLOAD_SECRET` | Una cadena aleatoria nueva (ver abajo). **No** reutilices la de tu computadora |
-| `DATABASE_URL` | La dirección *pooled* de Neon |
-| `DATABASE_URL_UNPOOLED` | La dirección directa de Neon |
-| `R2_ACCOUNT_ID` | Tu Account ID de Cloudflare |
-| `R2_BUCKET` | `chevere-media` |
-| `R2_ACCESS_KEY_ID` | El Access Key ID |
-| `R2_SECRET_ACCESS_KEY` | El Secret Access Key |
-| `NEXT_PUBLIC_SERVER_URL` | `https://NOMBRE-DE-TU-PROYECTO.vercel.app` (el nombre que le pongas en Vercel; sin `/` al final) |
+| `PAYLOAD_SECRET` | Una cadena aleatoria nueva (ver abajo). **No** reutilices la de tu computadora ni copies un texto de ejemplo |
+| `NEXT_PUBLIC_SERVER_URL` | `https://chevere.vercel.app` (el nombre que tenga tu proyecto en Vercel; sin `/` al final) |
 
-**Generar el `PAYLOAD_SECRET`:**
-- Mac/Linux: `openssl rand -base64 48`
-- Windows (con Node instalado): `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"`
+**Generar el `PAYLOAD_SECRET`** (Windows, en PowerShell; no necesita nada instalado):
 
-3. Pulsa **Deploy**. No cambies el comando de construcción: el proyecto ya trae `vercel-build`, que en cada despliegue (a) crea o actualiza las tablas, (b) crea las categorías si no existen y (c) compila la tienda.
+```powershell
+$b = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)
+```
 
-> **Sobre el plan de Vercel:** el plan gratuito (*Hobby*) está pensado para uso personal y no comercial según sus términos. Para una tienda que vende, revisa los términos vigentes; lo normal es necesitar el plan *Pro*.
+Copia la línea que sale y pégala como valor.
+
+4. Pulsa **Deploy**. **Va a fallar** con *"Faltan variables de entorno en Vercel"*, porque aún no hay base de datos ni almacén de fotos. Es lo esperado: lo arreglan los pasos 3 y 4.
+
+## Paso 3 · Crear la base de datos (Neon, desde Vercel)
+
+1. En tu proyecto de Vercel → pestaña **Storage** → **Create Database** → **Neon** (Serverless Postgres) → **Continue**.
+2. Plan **Free**, región **Washington, D.C. (iad1)**: es donde corre Vercel por defecto, así la tienda va más rápida. Nombre: `chevere-db`.
+3. Al terminar, pulsa **Connect Project**, elige `chevere` y marca los entornos *Production* y *Preview*.
+
+Vercel crea solas las variables `DATABASE_URL` y `DATABASE_URL_UNPOOLED`. No hay que copiar nada ni crear tablas: se crean solas en el primer despliegue. Es una base **nueva y vacía**; tus datos locales (`chevere.db`) no se suben.
+
+## Paso 4 · Crear el almacén de fotos (Vercel Blob)
+
+1. Pestaña **Storage** → **Create Database** → **Blob** → **Continue**. Nombre: `chevere-fotos`, acceso **Public**.
+2. **Connect Project** → `chevere` → entornos *Production* y *Preview*.
+
+Vercel crea sola la variable `BLOB_READ_WRITE_TOKEN`.
+
+## Paso 5 · Desplegar de verdad
+
+Pestaña **Deployments** → en el último despliegue (el que falló) pulsa **⋯ → Redeploy**.
+
+No cambies el comando de construcción: el proyecto ya trae `vercel-build`, que en cada despliegue (a) crea o actualiza las tablas, (b) crea las categorías si no existen y (c) compila la tienda.
 
 Si falta alguna variable, el despliegue se detiene con un mensaje que dice exactamente cuál. Agrégala y pulsa *Redeploy*.
 
-## Paso 5 · Crear tu cuenta de administrador (hazlo enseguida)
+## Paso 6 · Crear tu cuenta de administrador (hazlo enseguida)
 
 1. Entra a `https://TU-DIRECCION.vercel.app/admin`.
 2. Registra tu cuenta. **La primera cuenta que se crea siempre es administradora**, así que hazlo en cuanto termine el despliegue, antes de compartir la dirección con nadie.
@@ -81,7 +88,7 @@ Si falta alguna variable, el despliegue se detiene con un mensaje que dice exact
 
 No ejecutes `npm run seed` en producción: crearía cuentas de ejemplo con una contraseña conocida (`Cambiar.2026`).
 
-## Paso 6 · Dejar la tienda lista
+## Paso 7 · Dejar la tienda lista
 
 En el panel (`/admin`):
 
@@ -89,11 +96,11 @@ En el panel (`/admin`):
 2. **Categorías**: sube las fotos de portada y las fotos de modelos (ya están creadas Damas, Caballeros, Niños, Accesorios y Calzado con sus subcategorías).
 3. **Productos → Crear nuevo**: carga productos con fotos reales. Un producto necesita al menos una variante (color + talla + SKU + stock) para poder publicarse; los borradores sí se pueden guardar incompletos.
 
-## Paso 7 · Lista de comprobación después de publicar
+## Paso 8 · Lista de comprobación después de publicar
 
 - [ ] La portada y una categoría cargan.
 - [ ] Puedes entrar a `/admin` con tu cuenta.
-- [ ] Subes una foto y aparece en tu bucket de R2 (Cloudflare → R2 → `chevere-media`).
+- [ ] Subes una foto y aparece en Vercel → Storage → `chevere-fotos`.
 - [ ] Publicas un producto y su ficha (`/p/...`) carga con la foto.
 - [ ] El botón **Consultar por WhatsApp** abre el chat con el número correcto.
 - [ ] Envías una reseña de prueba: aparece en el panel como *no aprobada* y no se ve en la tienda.
@@ -108,7 +115,7 @@ Vercel → tu proyecto → **Settings → Domains** → agrega `tudominio.com` y
 ## Qué cambió en el código para la nube
 
 - **Base de datos:** con `DATABASE_URL` de Neon se usa Postgres; las tablas cambian solo mediante migraciones (`src/migrations`), nunca "por sorpresa".
-- **Fotos:** con las variables `R2_*` las imágenes se guardan en R2. Sin ellas (en tu computadora) siguen en la carpeta `media/`.
+- **Fotos:** con `BLOB_READ_WRITE_TOKEN` las imágenes se guardan en Vercel Blob (o en Cloudflare R2 si configuras las variables `R2_*`, que tienen prioridad). Sin ninguna (en tu computadora) siguen en la carpeta `media/`.
 - **Freno anti-spam:** reseñas (3 por persona y 40 en total por hora) y boletín (5 por persona y 100 en total por hora). Se guarda solo un código irreversible de la IP, nunca la IP; si publicas una política de privacidad, menciónalo. Esto frena bots y avalanchas, pero no sustituye un captcha (Cloudflare Turnstile sería el siguiente paso si llega mucho spam). Las reseñas ya requerían tu aprobación.
 - **GraphQL apagado:** la tienda no lo usa, y así hay una puerta menos abierta.
 - **Variantes obligatorias al publicar:** antes se podía publicar un producto sin variantes y su ficha daba error 500.
@@ -138,7 +145,7 @@ El paquete trae `chevere.db` **limpia**: las 43 categorías y 4 cuentas de prueb
 | El despliegue falla con *"Faltan variables de entorno en Vercel"* | Falta o está mal una variable | Agrégala en Vercel → Settings → Environment Variables y pulsa *Redeploy* |
 | *relation "…" does not exist* | Las migraciones no se aplicaron | Revisa el log del despliegue: el paso `migrate` debe terminar en *Done*. Comprueba `DATABASE_URL_UNPOOLED` |
 | Al subir una foto aparece error 413 | Vercel limita cada subida a 4,5 MB | Reduce el peso de la foto (en WebP/JPG casi siempre basta) |
-| Las fotos no cargan (404) | Las variables `R2_*` están mal o el token no tiene permiso sobre el bucket | Revisa que el token tenga *Object Read & Write* en `chevere-media` |
+| Las fotos no cargan (404) | El almacén Blob no está conectado al proyecto, o se pasó el límite gratis del mes | Vercel → Storage → `chevere-fotos`: revisa que esté conectado a `chevere` y mira el uso. Si se pasó del límite, toca esperar al mes siguiente o pasar a Pro |
 | No puedes iniciar sesión en `/admin` | `NEXT_PUBLIC_SERVER_URL` no coincide con la dirección que usas | Corrígela (con `https://`, sin `/` final) y haz *Redeploy* |
 | Error 429 al enviar una reseña o suscripción | El freno anti-spam se activó | Es normal si se envían muchas seguidas; se libera pasada una hora |
 
@@ -146,4 +153,4 @@ El paquete trae `chevere.db` **limpia**: las 43 categorías y 4 cuentas de prueb
 
 - **Pasarela de pago.** Mientras tanto puedes vender con Pago Móvil o Zelle manual: el pedido queda *Pendiente de pago*, el cliente envía la referencia y tu equipo lo pasa a *Pagado* (eso descuenta el stock solo).
 - Copias de seguridad: revisa la retención de historial de tu plan en Neon y programa una exportación periódica de la base.
-- Si el tráfico crece, servir las fotos directamente desde un dominio público de R2 (en lugar de pasar por Vercel) baja el costo y acelera la tienda.
+- Si el tráfico crece, pasa a Vercel Pro o mueve las fotos a Cloudflare R2 (variables `R2_*` en `.env.example`), que no cobra la descarga.
